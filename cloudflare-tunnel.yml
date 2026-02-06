@@ -1,0 +1,10 @@
+tunnel: bb083f57-e3d9-4872-a91a-eaa7771f4380
+credentials-file: /config/creds/bb083f57-e3d9-4872-a91a-eaa7771f4380.json
+
+ingress:
+  # Route requests to Baby Buddy application
+  - hostname: babybuddy.parashuramjoshi.in
+    service: http://host.docker.internal:8000
+
+  # Catch-all rule (required)
+  - service: http_status:404
