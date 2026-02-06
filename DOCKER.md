@@ -4,8 +4,7 @@ This guide explains how to run Baby Buddy using Docker and Docker Compose.
 
 ## Prerequisites
 
-- Docker Desktop (or Docker Engine + Docker Compose)
-- Make (usually pre-installed on macOS/Linux)
+- Docker Desktop (or Docker Engine with Docker Compose v2)
 
 ## Quick Start
 
@@ -16,14 +15,8 @@ Make sure Docker Desktop is running before proceeding.
 ### 2. Build and Start Services
 
 ```bash
-# View all available commands
-make help
-
-# Build Docker images (first time only)
-make build
-
-# Start all services (database + web)
-make start
+# Build images and start all services (database + web)
+docker compose up -d --build
 ```
 
 The application will be available at: **http://localhost:8000**
@@ -33,74 +26,64 @@ Default credentials:
 - Username: `admin`
 - Password: `admin`
 
-## Makefile Commands
+## Docker Compose Commands
 
 ### Service Management
 
-| Command        | Description                   |
-| -------------- | ----------------------------- |
-| `make start`   | Start all services (db + web) |
-| `make stop`    | Stop all services             |
-| `make restart` | Restart all services          |
-| `make down`    | Stop and remove containers    |
-| `make build`   | Build/rebuild Docker images   |
-| `make rebuild` | Rebuild and restart services  |
+| Command                        | Description                   |
+| ------------------------------ | ----------------------------- |
+| `docker compose up -d`         | Start all services (db + web) |
+| `docker compose stop`          | Stop all services             |
+| `docker compose restart`       | Restart all services          |
+| `docker compose down`          | Stop and remove containers    |
+| `docker compose build`         | Build/rebuild Docker images   |
+| `docker compose up -d --build` | Rebuild and restart services  |
 
 ### Database Management
 
-| Command                           | Description                        |
-| --------------------------------- | ---------------------------------- |
-| `make dbstart`                    | Start only the database            |
-| `make dbstop`                     | Stop only the database             |
-| `make dbshell`                    | Open PostgreSQL shell              |
-| `make dbreset`                    | Reset database (deletes all data!) |
-| `make backup-db`                  | Backup database to file            |
-| `make restore-db FILE=backup.sql` | Restore from backup                |
+| Command                                                                       | Description                                             |
+| ----------------------------------------------------------------------------- | ------------------------------------------------------- | -------------- |
+| `docker compose up -d db`                                                     | Start only the database                                 |
+| `docker compose stop db`                                                      | Stop only the database                                  |
+| `docker compose exec db psql -U $DB_USER -d $DB_NAME`                         | Open PostgreSQL shell                                   |
+| `docker compose down -v`                                                      | Reset database (deletes all data!)                      |
+| `docker compose exec -T db pg_dump -U $DB_USER $DB_NAME > backups/backup.sql` | Backup database                                         |
+| `cat backups/backup.sql                                                       | docker compose exec -T db psql -U $DB_USER -d $DB_NAME` | Restore backup |
 
 ### Monitoring
 
-| Command            | Description                  |
-| ------------------ | ---------------------------- |
-| `make logs`        | Show logs from all services  |
-| `make logs-follow` | Follow logs (Ctrl+C to exit) |
-| `make logs-web`    | Show web service logs        |
-| `make logs-db`     | Show database logs           |
-| `make ps`          | Show running containers      |
-| `make status`      | Show service status          |
-| `make health`      | Check service health         |
+| Command                   | Description                  |
+| ------------------------- | ---------------------------- |
+| `docker compose logs`     | Show logs from all services  |
+| `docker compose logs -f`  | Follow logs (Ctrl+C to exit) |
+| `docker compose logs web` | Show web service logs        |
+| `docker compose logs db`  | Show database logs           |
+| `docker compose ps`       | Show running containers      |
 
 ### Shell Access
 
-| Command           | Description                      |
-| ----------------- | -------------------------------- |
-| `make shell`      | Open shell in web container      |
-| `make shell-root` | Open root shell in web container |
-| `make dbshell`    | Open PostgreSQL shell            |
+| Command                                               | Description                      |
+| ----------------------------------------------------- | -------------------------------- |
+| `docker compose exec web sh`                          | Open shell in web container      |
+| `docker compose exec --user root web sh`              | Open root shell in web container |
+| `docker compose exec db psql -U $DB_USER -d $DB_NAME` | Open PostgreSQL shell            |
 
 ### Django Management
 
-| Command                | Description             |
-| ---------------------- | ----------------------- |
-| `make migrate`         | Run database migrations |
-| `make makemigrations`  | Create new migrations   |
-| `make createsuperuser` | Create admin user       |
-| `make collectstatic`   | Collect static files    |
-| `make test`            | Run tests in container  |
+| Command                                                            | Description             |
+| ------------------------------------------------------------------ | ----------------------- |
+| `docker compose exec web python manage.py migrate`                 | Run database migrations |
+| `docker compose exec web python manage.py makemigrations`          | Create new migrations   |
+| `docker compose exec web python manage.py createsuperuser`         | Create admin user       |
+| `docker compose exec web python manage.py collectstatic --noinput` | Collect static files    |
+| `docker compose exec web python manage.py test`                    | Run tests in container  |
 
 ### Cleanup
 
-| Command          | Description                  |
-| ---------------- | ---------------------------- |
-| `make clean`     | Remove stopped containers    |
-| `make clean-all` | Remove everything (WARNING!) |
-
-### Local Development (without Docker)
-
-| Command           | Description                 |
-| ----------------- | --------------------------- |
-| `make dev-setup`  | Setup local dev environment |
-| `make dev-start`  | Start local dev server      |
-| `make test-local` | Run tests locally           |
+| Command                  | Description                  |
+| ------------------------ | ---------------------------- |
+| `docker compose rm -f`   | Remove stopped containers    |
+| `docker compose down -v` | Remove everything (WARNING!) |
 
 ## Architecture
 
@@ -159,7 +142,7 @@ Key variables:
 - `SECRET_KEY`: Django secret key (generate a secure one!)
 - `DEBUG`: Set to `False` in production
 - `ALLOWED_HOSTS`: Comma-separated list of allowed hosts
-- `DATABASE_URL`: PostgreSQL connection string
+- `DB_NAME`, `DB_USER`, `DB_PASSWORD`, `DB_HOST`, `DB_PORT`: PostgreSQL connection settings
 - `TIME_ZONE`: Your timezone (e.g., `America/New_York`)
 
 ### Ports
@@ -182,78 +165,74 @@ ports:
 
 ```bash
 # 1. Build images
-make build
+docker compose build
 
 # 2. Start services
-make start
+docker compose up -d
 
 # 3. Create admin user (optional, default admin/admin exists)
-make createsuperuser
+docker compose exec web python manage.py createsuperuser
 ```
 
 ### Daily Development
 
 ```bash
 # Start services
-make start
+docker compose up -d
 
 # View logs
-make logs-follow
+docker compose logs -f
 
 # Stop when done
-make stop
+docker compose stop
 ```
 
 ### Database Backup
 
 ```bash
 # Backup
-make backup-db
-# Creates: backups/backup_YYYYMMDD_HHMMSS.sql
+mkdir -p backups
+docker compose exec -T db pg_dump -U $DB_USER $DB_NAME > backups/backup_YYYYMMDD_HHMMSS.sql
 
 # Restore
-make restore-db FILE=backups/backup_20250101_120000.sql
+cat backups/backup_20250101_120000.sql | docker compose exec -T db psql -U $DB_USER -d $DB_NAME
 ```
 
 ### Troubleshooting
 
 ```bash
 # Check service status
-make status
+docker compose ps
 
 # Check health
-make health
+docker compose ps
 
 # View logs
-make logs
+docker compose logs
 
 # Restart services
-make restart
+docker compose restart
 
 # Rebuild from scratch
-make clean
-make build
-make start
+docker compose down -v
+docker compose up -d --build
 ```
 
 ### Running Migrations
 
 ```bash
 # Auto-run on startup, or manually:
-make migrate
+docker compose exec web python manage.py migrate
 
 # Create new migrations (after model changes):
-make makemigrations
+docker compose exec web python manage.py makemigrations
 ```
 
 ### Running Tests
 
 ```bash
 # In Docker:
-make test
-
-# Locally (faster):
-make test-local
+docker compose exec web python manage.py test
 ```
 
 ## Production Considerations
@@ -282,19 +261,19 @@ For production deployments:
 
    ```bash
    # Set up automated backups
-   make backup-db
+   docker compose exec -T db pg_dump -U $DB_USER $DB_NAME > backups/backup_YYYYMMDD_HHMMSS.sql
    ```
 
 5. **Monitor logs**:
 
    ```bash
-   make logs-follow
+   docker compose logs -f
    ```
 
 6. **Update regularly**:
    ```bash
    git pull
-   make rebuild
+   docker compose up -d --build
    ```
 
 ## Cleaning Up
@@ -303,10 +282,10 @@ For production deployments:
 
 ```bash
 # Remove stopped containers
-make clean
+docker compose rm -f
 
 # Remove everything (including volumes!)
-make clean-all
+docker compose down -v
 ```
 
 ### Remove specific volumes
